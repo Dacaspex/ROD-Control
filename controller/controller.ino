@@ -8,8 +8,19 @@ const int gimballInitPosX = 90;
 const int gimballInitPosY = 90;
 int gimballPosX = 90;
 int gimballPosY = 90;
+
+// Gimball pins
 int gimballServoPinX = A0;
 int gimballServoPinY = A1;
+
+// Movement system
+int speed = 255;
+
+// Movement pins (PWM)
+int leftPWM1 = 3;
+int leftPWM2 = 5;
+int rightPWM1 = 6;
+int rightPWM2 = 11;
 
 // Controll keys
 const char forwardKey = 'w';
@@ -30,6 +41,12 @@ void setup() {
     gimballServoY.attach(gimballServoPinY);
     resetGimballPos();
 
+    // Setup movement system (PWM)
+    analogWrite(leftPWM1, 0);
+    analogWrite(leftPWM2, 0);
+    analogWrite(rightPWM1, 0);
+    analogWrite(rightPWM2, 0);
+
     // Setup serial
     Serial1.begin(115200);
 
@@ -46,6 +63,7 @@ void loop() {
         char command = Serial1.read();
 
         switch (command) {
+            // Gimball
             case gimballUpKey:
                 moveGimballUp();
                 break;
@@ -61,6 +79,20 @@ void loop() {
             case gimballNeutralKey:
                 resetGimballPos();
                 break;
+
+            // Movement
+            case forwardKey:
+                moveForward();
+                break;
+            case backwardKey:
+                moveBackward();
+                break;
+            case leftKey:
+                moveLeft();
+                break;
+            case rightKey:
+                moveRight();
+                break;
         }
 
     }
@@ -75,6 +107,41 @@ void resetGimballPos() {
     gimballPosY = gimballInitPosY;
     gimballServoX.write(gimballPosX);
     gimballServoY.write(gimballPosY);
+}
+
+void stop() {
+    analogWrite(leftPWM1, 0);
+    analogWrite(leftPWM2, 0);
+    analogWrite(rightPWM1, 0);
+    analogWrite(rightPWM2, 0);
+}
+
+void moveForward() {
+    analogWrite(leftPWM1, speed);
+    analogWrite(leftPWM2, 0);
+    analogWrite(rightPWM1, speed);
+    analogWrite(rightPWM2, 0);
+}
+
+void moveBackward() {
+    analogWrite(leftPWM1, 0);
+    analogWrite(leftPWM2, speed);
+    analogWrite(rightPWM1, 0);
+    analogWrite(rightPWM2, speed);
+}
+
+void moveLeft() {
+    analogWrite(leftPWM1, speed);
+    analogWrite(leftPWM2, 0);
+    analogWrite(rightPWM1, 0);
+    analogWrite(rightPWM2, speed);
+}
+
+void moveRight() {
+    analogWrite(leftPWM1, 0);
+    analogWrite(leftPWM2, speed);
+    analogWrite(rightPWM1, speed);
+    analogWrite(rightPWM2, 0);
 }
 
 void moveGimballUp() {
