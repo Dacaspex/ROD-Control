@@ -13,8 +13,17 @@ int gimballPosY = 90;
 int gimballServoPinX = A0;
 int gimballServoPinY = A1;
 
+// Gimball keys
+const char gimballUpKey = 'i';
+const char gimballDownKey = 'k';
+const char gimballLeftKey = 'j';
+const char gimballRightKey = 'l';
+const char gimballNeutralKey = 'o';
+
 // Movement system
-int speed = 255;
+int maxSpeed = 100;
+int slowSpeed = 20;
+int turningSpeed = 50;
 
 // Movement pins (PWM)
 int leftPWM1 = 3;
@@ -27,13 +36,20 @@ const char forwardKey = 'w';
 const char backwardKey = 's';
 const char leftKey = 'a';
 const char rightKey = 'd';
+char movingKeys[4] = {
+    forwardKey,
+    backwardKey,
+    leftKey,
+    rightKey
+};
 
-const char gimballUpKey = 'i';
-const char gimballDownKey = 'k';
-const char gimballLeftKey = 'j';
-const char gimballRightKey = 'l';
-const char gimballNeutralKey = 'o';
+// Timing
+int keyDelay = 200;
+int lastKeyPress = 0;
 
+/**
+ * Initialises program. Ran only once at startup
+ */
 void setup() {
 
     // Setup gimball system
@@ -57,11 +73,16 @@ void setup() {
 
 }
 
+/**
+ * Main program loop
+ */
 void loop() {
 
+    // Check if there are any commands to process
     if (Serial1.available() > 0) {
         char command = Serial1.read();
 
+        // Execute action according to which key was pressed
         switch (command) {
             // Gimball
             case gimballUpKey:
@@ -95,8 +116,58 @@ void loop() {
                 break;
         }
 
+        // Check if the command was a moving command
+        if (containsChar(movingKeys, command)) {
+            // If so, reset lastKeyPress time
+            lastKeyPress = millis();
+        } else {
+            // If not, check whether the ROD should stop moving
+            if (lastKeyPress + delay >= millis()) {
+                stopMovement();
+            }
+        }
     }
 
+}
+
+void stopMovement() {
+    analogWrite(leftPWM1, 0);
+    analogWrite(leftPWM2, 0);
+    analogWrite(rightPWM1, 0);
+    analogWrite(rightPWM2, 0);
+}
+
+void moveForward() {
+    analogWrite(leftPWM1, maxSpeed);
+    analogWrite(leftPWM2, 0);
+    analogWrite(rightPWM1, maxSpeed);
+    analogWrite(rightPWM2, 0);
+}
+
+void moveBackward() {
+    analogWrite(leftPWM1, 0);
+    analogWrite(leftPWM2, maxSpeed);
+    analogWrite(rightPWM1, 0);
+    analogWrite(rightPWM2, maxSpeed);
+}
+
+void moveLeft() {
+    analogWrite(leftPWM1, maxSpeed);
+    analogWrite(leftPWM2, 0);
+    analogWrite(rightPWM1, 0);
+    analogWrite(rightPWM2, maxSpeed);
+}
+
+void moveRight() {
+    analogWrite(leftPWM1, 0);
+    analogWrite(leftPWM2, maxSpeed);
+    analogWrite(rightPWM1, maxSpeed);
+    analogWrite(rightPWM2, 0);
+}
+
+void updateGimballPos() {
+    gimballServoX.write(gimballPosX);
+    gimballServoY.write(gimballPosY);
 }
 
 /**
@@ -105,57 +176,34 @@ void loop() {
 void resetGimballPos() {
     gimballPosX = gimballInitPosX;
     gimballPosY = gimballInitPosY;
-    gimballServoX.write(gimballPosX);
-    gimballServoY.write(gimballPosY);
-}
-
-void stop() {
-    analogWrite(leftPWM1, 0);
-    analogWrite(leftPWM2, 0);
-    analogWrite(rightPWM1, 0);
-    analogWrite(rightPWM2, 0);
-}
-
-void moveForward() {
-    analogWrite(leftPWM1, speed);
-    analogWrite(leftPWM2, 0);
-    analogWrite(rightPWM1, speed);
-    analogWrite(rightPWM2, 0);
-}
-
-void moveBackward() {
-    analogWrite(leftPWM1, 0);
-    analogWrite(leftPWM2, speed);
-    analogWrite(rightPWM1, 0);
-    analogWrite(rightPWM2, speed);
-}
-
-void moveLeft() {
-    analogWrite(leftPWM1, speed);
-    analogWrite(leftPWM2, 0);
-    analogWrite(rightPWM1, 0);
-    analogWrite(rightPWM2, speed);
-}
-
-void moveRight() {
-    analogWrite(leftPWM1, 0);
-    analogWrite(leftPWM2, speed);
-    analogWrite(rightPWM1, speed);
-    analogWrite(rightPWM2, 0);
+    updateGimballPos();
 }
 
 void moveGimballUp() {
     gimballPosX += 5;
+    updateGimballPos();
 }
 
 void moveGimballDown() {
     gimballPosX -= 5;
+    updateGimballPos();
 }
 
 void moveGimballLeft() {
     gimballPosY -= 5;
+    updateGimballPos();
 }
 
 void moveGimballRight() {
     gimballPosY += 5;
+    updateGimballPos();
+}
+
+bool containsChar(char haystack[], char needle) {
+    for (int i = 0; i <= sizeof(haystack); i++) {
+        if (haystack[i] == needle) {
+            return true;
+        }
+    }
+    return false;
 }
