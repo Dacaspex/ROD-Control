@@ -1,24 +1,24 @@
 
 #include <Servo.h>
 
-// Gimball system
-Servo gimballServoX;
-Servo gimballServoY;
-const int gimballInitPosX = 90;
-const int gimballInitPosY = 90;
-int gimballPosX = 90;
-int gimballPosY = 90;
+// gimbal system
+Servo gimbalServoX;
+Servo gimbalServoY;
+const int gimbalInitPosX = 90;
+const int gimbalInitPosY = 90;
+int gimbalPosX = 90;
+int gimbalPosY = 90;
 
-// Gimball pins
-int gimballServoPinX = A0;
-int gimballServoPinY = A1;
+// gimbal pins
+int gimbalServoPinX = A0;
+int gimbalServoPinY = A1;
 
-// Gimball keys
-const char gimballUpKey = 'i';
-const char gimballDownKey = 'k';
-const char gimballLeftKey = 'j';
-const char gimballRightKey = 'l';
-const char gimballNeutralKey = 'o';
+// gimbal keys
+const char gimbalUpKey = 'i';
+const char gimbalDownKey = 'k';
+const char gimbalLeftKey = 'j';
+const char gimbalRightKey = 'l';
+const char gimbalNeutralKey = 'o';
 
 // Movement system
 int maxSpeed = 100;
@@ -52,10 +52,10 @@ int lastKeyPress = 0;
  */
 void setup() {
 
-    // Setup gimball system
-    gimballServoX.attach(gimballServoPinX);
-    gimballServoY.attach(gimballServoPinY);
-    resetGimballPos();
+    // Setup gimbal system
+    gimbalServoX.attach(gimbalServoPinX);
+    gimbalServoY.attach(gimbalServoPinY);
+    resetgimbalPos();
 
     // Setup movement system (PWM)
     analogWrite(leftPWM1, 0);
@@ -84,21 +84,21 @@ void loop() {
 
         // Execute action according to which key was pressed
         switch (command) {
-            // Gimball
-            case gimballUpKey:
-                moveGimballUp();
+            // gimbal
+            case gimbalUpKey:
+                movegimbalUp();
                 break;
-            case gimballDownKey:
-                moveGimballDown();
+            case gimbalDownKey:
+                movegimbalDown();
                 break;
-            case gimballLeftKey:
-                moveGimballLeft();
+            case gimbalLeftKey:
+                movegimbalLeft();
                 break;
-            case gimballRightKey:
-                moveGimballRight();
+            case gimbalRightKey:
+                movegimbalRight();
                 break;
-            case gimballNeutralKey:
-                resetGimballPos();
+            case gimbalNeutralKey:
+                resetgimbalPos();
                 break;
 
             // Movement
@@ -165,38 +165,38 @@ void moveRight() {
     analogWrite(rightPWM2, 0);
 }
 
-void updateGimballPos() {
-    gimballServoX.write(gimballPosX);
-    gimballServoY.write(gimballPosY);
+void updategimbalPos() {
+    gimbalServoX.write(gimbalPosX);
+    gimbalServoY.write(gimbalPosY);
 }
 
 /**
- * Resets the gimball to it's initial position
+ * Resets the gimbal to it's initial position
  */
-void resetGimballPos() {
-    gimballPosX = gimballInitPosX;
-    gimballPosY = gimballInitPosY;
-    updateGimballPos();
+void resetgimbalPos() {
+    gimbalPosX = gimbalInitPosX;
+    gimbalPosY = gimbalInitPosY;
+    updategimbalPos();
 }
 
-void moveGimballUp() {
-    gimballPosX += 5;
-    updateGimballPos();
+void movegimbalUp() {
+    gimbalPosX += 5;
+    updategimbalPos();
 }
 
-void moveGimballDown() {
-    gimballPosX -= 5;
-    updateGimballPos();
+void movegimbalDown() {
+    gimbalPosX -= 5;
+    updategimbalPos();
 }
 
-void moveGimballLeft() {
-    gimballPosY -= 5;
-    updateGimballPos();
+void movegimbalLeft() {
+    gimbalPosY -= 5;
+    updategimbalPos();
 }
 
-void moveGimballRight() {
-    gimballPosY += 5;
-    updateGimballPos();
+void movegimbalRight() {
+    gimbalPosY += 5;
+    updategimbalPos();
 }
 
 bool containsChar(char haystack[], char needle) {
