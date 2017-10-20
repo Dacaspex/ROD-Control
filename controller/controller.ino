@@ -1,29 +1,76 @@
 
 #include <Servo.h>
 
-// Basket
+/*
+ * Control, servos, pins, properties
+ */
+
+/* Basket system */
 Servo basketServo;
 int basketServoPin = A4;
+// The servo stops rotating if set to this value, otherwise it starts moving
+int const basketStopAngle = 90;
+int const basketForwardAngle = 100;
+int const basketBackwardAngle = 80;
 
-// Pullies
+/* Pully system */
 Servo pullyServo1;
 Servo pullyServo2;
 int pullyServo1Pin = A2;
 int pullyServo2Pin = A3;
 int pullyServo1Pos = 90;
 int pullyServo2Pos = 90;
+// We're dealing with 180 servos
+int const maxPullyAngle = 180;
+int const minPullyAngle = 0;
 
-// gimbal system
+/* gimbal system */
 Servo gimbalServoX;
 Servo gimbalServoY;
+int gimbalServoPinX = A0;
+int gimbalServoPinY = A1;
+// Initial positions
 const int gimbalInitPosX = 90;
 const int gimbalInitPosY = 90;
+// The current angles
 int gimbalPosX = 90;
 int gimbalPosY = 90;
 
-// gimbal pins
-int gimbalServoPinX = A0;
-int gimbalServoPinY = A1;
+/* Movement system */
+// Max speed is the full speed
+int maxSpeed = 80;
+// Slow speed for approaching victims
+int slowSpeed = 20;
+// Inner wheel rotates at lower speed in order to turn
+int turningMaxSpeed = 20;
+// Also at a lower velocity
+int turningSlowSpeed = 5;
+// Driving mode; 1: Full speed 2: Turtle speed
+int drivingMode = 1;
+// Are we driving?
+bool isDriving = false;
+// Movement pins (PWM)
+// Left wheel, forward
+int leftPWM1 = 3;
+// Left wheel, backward
+int leftPWM2 = 5;
+// Right wheel, forward
+int rightPWM1 = 6;
+// Right wheel, you get the idea
+int rightPWM2 = 11;
+
+/*
+ * Keys
+ */
+
+// Basket keys
+const char basketLeftKey = 'z';
+const char basketStopKey = 'x';
+const char basketRightKey = 'c';
+
+// Pully keys
+const char pullUpKey = 'm';
+const char pullDownKey = 'n';
 
 // gimbal keys
 const char gimbalUpKey = 'i';
@@ -32,23 +79,13 @@ const char gimbalLeftKey = 'j';
 const char gimbalRightKey = 'l';
 const char gimbalNeutralKey = 'o';
 
-// Movement system
-int maxSpeed = 100;
-int slowSpeed = 20;
-int turningSpeed = 50;
-bool isDriving = false;
-
-// Movement pins (PWM)
-int leftPWM1 = 3;
-int leftPWM2 = 5;
-int rightPWM1 = 6;
-int rightPWM2 = 11;
-
 // Controll keys
 const char forwardKey = 'w';
 const char backwardKey = 's';
 const char leftKey = 'a';
 const char rightKey = 'd';
+const char stopKey = 'q';
+const char changeDrivingModeKey = 'e';
 char movingKeys[4] = {
     forwardKey,
     backwardKey,
@@ -56,8 +93,11 @@ char movingKeys[4] = {
     rightKey
 };
 
+/*
+ * Misc
+ */
 // Timing
-unsigned long keyDelay = 300;
+unsigned long keyDelay = 100;
 unsigned long lastKeyPress = 0;
 
 // LED
@@ -68,29 +108,27 @@ int ledPin = 13;
  */
 void setup() {
 
+    // Initialise LED on the Arduino
     pinMode(ledPin, OUTPUT);
 
-    // Setup gimbal system
+    // Setup gimbal system, attach servos to the pins
     gimbalServoX.attach(gimbalServoPinX);
     gimbalServoY.attach(gimbalServoPinY);
     resetgimbalPos();
 
     // Setup movement system (PWM)
-    analogWrite(leftPWM1, 0);
-    analogWrite(leftPWM2, 0);
-    analogWrite(rightPWM1, 0);
-    analogWrite(rightPWM2, 0);
+    stopDriving();
 
-    // Pully system
+    // Pully system, attach servos, set initial angle
     pullyServo1.attach(pullyServo1Pin);
     pullyServo2.attach(pullyServo2Pin);
     pullyServo1.write(pullyServo1Pos);
     pullyServo2.write(pullyServo2Pos);
 
-    // Basket
+    // Basket, attach servo
     basketServo.attach(basketServoPin);
 
-    // Setup serial
+    // Setup serial, for sending and receiving data (commands, feedback)
     Serial1.begin(115200);
     Serial.begin(9600);
 
@@ -100,7 +138,6 @@ void setup() {
     }
 
     digitalWrite(ledPin, LOW);
-
 }
 
 /**
@@ -108,43 +145,45 @@ void setup() {
  */
 void loop() {
 
+    // Check if we should stop driving
     if (isDriving && (lastKeyPress + keyDelay <= millis())) {
-        Serial.println("test4");
         isDriving = false;
-        stopMovement();
+        stopDriving();
     }
 
     // Check if there are any commands to process
     if (Serial1.available() > 0) {
+
         char command = Serial1.read();
 
         // Execute action according to which key was pressed
         switch (command) {
             // Pully
-            case 'm':
+            case pullUpKey:
                 pullyServo1Pos += 2;
                 pullyServo2Pos += 2;
                 pullyServo1.write(pullyServo1Pos);
                 pullyServo2.write(pullyServo2Pos);
                 break;
 
-            case 'n':
+            case pullDownKey:
                 pullyServo1Pos -= 2;
                 pullyServo2Pos -= 2;
                 pullyServo1.write(pullyServo1Pos);
                 pullyServo2.write(pullyServo2Pos);
                 break;
 
-            case 'z':
-                basketServo.write(100);
+            // Basket
+            case basketLeftKey:
+                basketServo.write(basketForwardAngle);
                 break;
 
-            case 'x':
-                basketServo.write(90);
+            case basketStopKey:
+                basketServo.write(basketStopAngle);
                 break;
 
-            case 'c':
-                basketServo.write(80);
+            case basketRightKey:
+                basketServo.write(basketBackwardAngle);
                 break;
 
             // gimbal
@@ -165,8 +204,8 @@ void loop() {
                 break;
 
             // Movement
-            case 'q':
-                stopMovement();
+            case stopKey:
+                stopDriving();
                 break;
             case forwardKey:
                 moveForward();
@@ -178,24 +217,29 @@ void loop() {
                 moveLeft();
                 break;
             case rightKey:
-                Serial.println("test 1");
                 moveRight();
-                Serial.println("Test 2");
+                break;
+            case changeDrivingModeKey:
+                changeDrivingMode();
                 break;
         }
 
-        Serial.println("test: " + containsChar(movingKeys, command));
-
         if (containsChar(movingKeys, command)) {
-            Serial.println("test5");
             isDriving = true;
             lastKeyPress = millis();
         }
     }
-
 }
 
-void stopMovement() {
+void changeDrivingMode() {
+    if (drivingMode == 1) {
+        drivingMode = 2;
+    } else {
+        drivingMode = 1;
+    }
+}
+
+void stopDriving() {
     analogWrite(leftPWM1, 0);
     analogWrite(leftPWM2, 0);
     analogWrite(rightPWM1, 0);
@@ -203,32 +247,51 @@ void stopMovement() {
 }
 
 void moveForward() {
-    analogWrite(leftPWM1, maxSpeed);
     analogWrite(leftPWM2, 0);
-    analogWrite(rightPWM1, maxSpeed);
     analogWrite(rightPWM2, 0);
+    if (drivingMode == 1) {
+        analogWrite(leftPWM1, maxSpeed);
+        analogWrite(rightPWM1, maxSpeed);
+    } else {
+        analogWrite(leftPWM1, slowSpeed);
+        analogWrite(rightPWM1, slowSpeed);
+    }
 }
 
 void moveBackward() {
     analogWrite(leftPWM1, 0);
-    analogWrite(leftPWM2, maxSpeed);
     analogWrite(rightPWM1, 0);
-    analogWrite(rightPWM2, maxSpeed);
+    if (drivingMode == 1) {
+        analogWrite(leftPWM2, maxSpeed);
+        analogWrite(rightPWM2, maxSpeed);
+    } else {
+        analogWrite(leftPWM2, slowSpeed);
+        analogWrite(rightPWM2, slowSpeed);
+    }
 }
 
 void moveLeft() {
-    analogWrite(leftPWM1, turningSpeed);
     analogWrite(leftPWM2, 0);
-    analogWrite(rightPWM1, maxSpeed);
     analogWrite(rightPWM2, 0);
+    if (drivingMode == 1) {
+        analogWrite(leftPWM1, turningMaxSpeed);
+        analogWrite(rightPWM1, maxSpeed);
+    } else {
+        analogWrite(leftPWM1, turningSlowSpeed);
+        analogWrite(rightPWM1, slowSpeed);
+    }
 }
 
 void moveRight() {
-    analogWrite(leftPWM1, maxSpeed);
     analogWrite(leftPWM2, 0);
-    analogWrite(rightPWM1, turningSpeed);
     analogWrite(rightPWM2, 0);
-    Serial.write("test 3");
+    if (drivingMode == 1) {
+        analogWrite(leftPWM1, maxSpeed);
+        analogWrite(rightPWM1, turningSpeed);
+    } else {
+        analogWrite(leftPWM1, slowSpeed);
+        analogWrite(rightPWM1, turningSlowSpeed);
+    }
 }
 
 void updategimbalPos() {
@@ -265,6 +328,14 @@ void movegimbalRight() {
     updategimbalPos();
 }
 
+/**
+ * Checks whether a command is a movement key
+ *
+ * @param  haystack Movement keys
+ * @param  needle   Command
+ * @return          True if the command is a movement key,
+ *                  False otherwise
+ */
 bool containsChar(char haystack[], char needle) {
     for (int i = 0; i < 4; i++) {
         char item = haystack[i];
