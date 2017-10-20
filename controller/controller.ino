@@ -1,6 +1,18 @@
 
 #include <Servo.h>
 
+// Basket
+Servo basketServo;
+int basketServoPin = A4;
+
+// Pullies
+Servo pullyServo1;
+Servo pullyServo2;
+int pullyServo1Pin = A2;
+int pullyServo2Pin = A3;
+int pullyServo1Pos = 90;
+int pullyServo2Pos = 90;
+
 // gimbal system
 Servo gimbalServoX;
 Servo gimbalServoY;
@@ -24,6 +36,7 @@ const char gimbalNeutralKey = 'o';
 int maxSpeed = 100;
 int slowSpeed = 20;
 int turningSpeed = 50;
+bool isDriving = false;
 
 // Movement pins (PWM)
 int leftPWM1 = 3;
@@ -44,13 +57,18 @@ char movingKeys[4] = {
 };
 
 // Timing
-int keyDelay = 200;
-int lastKeyPress = 0;
+unsigned long keyDelay = 300;
+unsigned long lastKeyPress = 0;
+
+// LED
+int ledPin = 13;
 
 /**
  * Initialises program. Ran only once at startup
  */
 void setup() {
+
+    pinMode(ledPin, OUTPUT);
 
     // Setup gimbal system
     gimbalServoX.attach(gimbalServoPinX);
@@ -63,13 +81,25 @@ void setup() {
     analogWrite(rightPWM1, 0);
     analogWrite(rightPWM2, 0);
 
+    // Pully system
+    pullyServo1.attach(pullyServo1Pin);
+    pullyServo2.attach(pullyServo2Pin);
+    pullyServo1.write(pullyServo1Pos);
+    pullyServo2.write(pullyServo2Pos);
+
+    // Basket
+    basketServo.attach(basketServoPin);
+
     // Setup serial
     Serial1.begin(115200);
+    Serial.begin(9600);
 
     // Clear the input buffer
     while (Serial1.available()) {
         Serial1.read();
     }
+
+    digitalWrite(ledPin, LOW);
 
 }
 
@@ -78,12 +108,45 @@ void setup() {
  */
 void loop() {
 
+    if (isDriving && (lastKeyPress + keyDelay <= millis())) {
+        Serial.println("test4");
+        isDriving = false;
+        stopMovement();
+    }
+
     // Check if there are any commands to process
     if (Serial1.available() > 0) {
         char command = Serial1.read();
 
         // Execute action according to which key was pressed
         switch (command) {
+            // Pully
+            case 'm':
+                pullyServo1Pos += 2;
+                pullyServo2Pos += 2;
+                pullyServo1.write(pullyServo1Pos);
+                pullyServo2.write(pullyServo2Pos);
+                break;
+
+            case 'n':
+                pullyServo1Pos -= 2;
+                pullyServo2Pos -= 2;
+                pullyServo1.write(pullyServo1Pos);
+                pullyServo2.write(pullyServo2Pos);
+                break;
+
+            case 'z':
+                basketServo.write(100);
+                break;
+
+            case 'x':
+                basketServo.write(90);
+                break;
+
+            case 'c':
+                basketServo.write(80);
+                break;
+
             // gimbal
             case gimbalUpKey:
                 movegimbalUp();
@@ -102,6 +165,9 @@ void loop() {
                 break;
 
             // Movement
+            case 'q':
+                stopMovement();
+                break;
             case forwardKey:
                 moveForward();
                 break;
@@ -112,19 +178,18 @@ void loop() {
                 moveLeft();
                 break;
             case rightKey:
+                Serial.println("test 1");
                 moveRight();
+                Serial.println("Test 2");
                 break;
         }
 
-        // Check if the command was a moving command
+        Serial.println("test: " + containsChar(movingKeys, command));
+
         if (containsChar(movingKeys, command)) {
-            // If so, reset lastKeyPress time
+            Serial.println("test5");
+            isDriving = true;
             lastKeyPress = millis();
-        } else {
-            // If not, check whether the ROD should stop moving
-            if (lastKeyPress + delay >= millis()) {
-                stopMovement();
-            }
         }
     }
 
@@ -152,17 +217,18 @@ void moveBackward() {
 }
 
 void moveLeft() {
-    analogWrite(leftPWM1, maxSpeed);
+    analogWrite(leftPWM1, turningSpeed);
     analogWrite(leftPWM2, 0);
-    analogWrite(rightPWM1, 0);
-    analogWrite(rightPWM2, maxSpeed);
+    analogWrite(rightPWM1, maxSpeed);
+    analogWrite(rightPWM2, 0);
 }
 
 void moveRight() {
-    analogWrite(leftPWM1, 0);
-    analogWrite(leftPWM2, maxSpeed);
-    analogWrite(rightPWM1, maxSpeed);
+    analogWrite(leftPWM1, maxSpeed);
+    analogWrite(leftPWM2, 0);
+    analogWrite(rightPWM1, turningSpeed);
     analogWrite(rightPWM2, 0);
+    Serial.write("test 3");
 }
 
 void updategimbalPos() {
@@ -200,7 +266,8 @@ void movegimbalRight() {
 }
 
 bool containsChar(char haystack[], char needle) {
-    for (int i = 0; i <= sizeof(haystack); i++) {
+    for (int i = 0; i < 4; i++) {
+        char item = haystack[i];
         if (haystack[i] == needle) {
             return true;
         }
