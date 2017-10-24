@@ -10,7 +10,9 @@ Servo basketServo;
 int basketServoPin = A4;
 // The servo stops rotating if set to this value, otherwise it starts moving
 int const basketStopAngle = 90;
+// Rotate with forward 'speed' = 10 (abs(90 - 100))
 int const basketForwardAngle = 100;
+// Rotate with backward 'speed' = 10 (90 - 80)
 int const basketBackwardAngle = 80;
 
 /* Pully system */
@@ -20,9 +22,11 @@ int pullyServo1Pin = A2;
 int pullyServo2Pin = A3;
 int pullyServo1Pos = 90;
 int pullyServo2Pos = 90;
-// We're dealing with 180 servos
+// We're dealing with 180 servos, these define the bounds
 int const maxPullyAngle = 180;
 int const minPullyAngle = 0;
+// The speed with which the servos turn
+int pullSpeed = 5;
 
 /* gimbal system */
 Servo gimbalServoX;
@@ -79,7 +83,7 @@ const char gimbalLeftKey = 'j';
 const char gimbalRightKey = 'l';
 const char gimbalNeutralKey = 'o';
 
-// Controll keys
+// Movement controll keys
 const char forwardKey = 'w';
 const char backwardKey = 's';
 const char leftKey = 'a';
@@ -160,28 +164,19 @@ void loop() {
         switch (command) {
             // Pully
             case pullUpKey:
-                pullyServo1Pos += 2;
-                pullyServo2Pos += 2;
-                pullyServo1.write(pullyServo1Pos);
-                pullyServo2.write(pullyServo2Pos);
+                pullUp();
                 break;
-
             case pullDownKey:
-                pullyServo1Pos -= 2;
-                pullyServo2Pos -= 2;
-                pullyServo1.write(pullyServo1Pos);
-                pullyServo2.write(pullyServo2Pos);
+                pullDown();
                 break;
 
             // Basket
             case basketLeftKey:
                 basketServo.write(basketForwardAngle);
                 break;
-
             case basketStopKey:
                 basketServo.write(basketStopAngle);
                 break;
-
             case basketRightKey:
                 basketServo.write(basketBackwardAngle);
                 break;
@@ -287,7 +282,7 @@ void moveRight() {
     analogWrite(rightPWM2, 0);
     if (drivingMode == 1) {
         analogWrite(leftPWM1, maxSpeed);
-        analogWrite(rightPWM1, turningSpeed);
+        analogWrite(rightPWM1, turningMaxSpeed);
     } else {
         analogWrite(leftPWM1, slowSpeed);
         analogWrite(rightPWM1, turningSlowSpeed);
@@ -326,6 +321,27 @@ void movegimbalLeft() {
 void movegimbalRight() {
     gimbalPosY += 5;
     updategimbalPos();
+}
+
+void pullUp() {
+    if (pullyServo1Pos + pullSpeed < maxPullyAngle) {
+        pullyServo1Pos += pullSpeed;
+        pullyServo2Pos += pullSpeed;
+        updatePullyPos();
+    }
+}
+
+void pullDown() {
+    if (pullyServo1Pos - pullSpeed > minPullyAngle) {
+        pullyServo1Pos -= pullSpeed;
+        pullyServo2Pos -= pullSpeed;
+        updatePullyPos();
+    }
+}
+
+void updatePullyPos() {
+    pullyServo1.write(pullyServo1Pos);
+    pullyServo2.write(pullyServo2Pos);
 }
 
 /**
