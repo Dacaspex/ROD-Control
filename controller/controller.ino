@@ -42,13 +42,13 @@ int gimbalPosY = 90;
 
 /* Movement system */
 // Max speed is the full speed
-int maxSpeed = 80;
+int maxSpeed = 250;
 // Slow speed for approaching victims
-int slowSpeed = 20;
+int slowSpeed = 100;
 // Inner wheel rotates at lower speed in order to turn
-int turningMaxSpeed = 20;
+int turningMaxSpeed = 80;
 // Also at a lower velocity
-int turningSlowSpeed = 5;
+int turningSlowSpeed = 30;
 // Driving mode; 1: Full speed 2: Turtle speed
 int drivingMode = 1;
 // Are we driving?
@@ -131,6 +131,7 @@ void setup() {
 
     // Basket, attach servo
     basketServo.attach(basketServoPin);
+    basketServo.write(basketStopAngle);
 
     // Setup serial, for sending and receiving data (commands, feedback)
     Serial1.begin(115200);
@@ -326,17 +327,21 @@ void movegimbalRight() {
 void pullUp() {
     if (pullyServo1Pos + pullSpeed < maxPullyAngle) {
         pullyServo1Pos += pullSpeed;
-        pullyServo2Pos += pullSpeed;
-        updatePullyPos();
     }
+    if (pullyServo2Pos - pullSpeed > minPullyAngle) {
+        pullyServo2Pos -= pullSpeed;
+    }
+    updatePullyPos();
 }
 
 void pullDown() {
     if (pullyServo1Pos - pullSpeed > minPullyAngle) {
         pullyServo1Pos -= pullSpeed;
-        pullyServo2Pos -= pullSpeed;
-        updatePullyPos();
     }
+    if (pullyServo2Pos + pullSpeed < maxPullyAngle) {
+        pullyServo2Pos += pullSpeed;
+    }
+    updatePullyPos();
 }
 
 void updatePullyPos() {
